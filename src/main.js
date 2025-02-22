@@ -19,16 +19,23 @@ const searchParams = new URLSearchParams({
 });
 
 let totalHits = 0;
-const message1 = "Sorry, there are no images matching your search query.Please, try again!";
+const message1 = "Sorry, there are no images matching your search query. Please, try again!";
 const message2 = "We're sorry, but you've reached the end of search results";
 const contentUL = document.querySelector('.image-content');
 const loader = document.querySelector('.loader');
 const loadMore = document.querySelector('.load-more-button');
 
-function scrollPage(){
+const lightbox = new SimpleLightbox('.content-list-item a', {
+  captionsData: 'alt',
+  captionDelay: 250,
+});
+
+function scrollPage() {
   let listItems = document.querySelector('.content-list-item');
-  let rect = listItems.getBoundingClientRect();
-  window.scrollBy({top: rect.height*2, behavior: 'smooth',});
+  if (listItems) {
+    let rect = listItems.getBoundingClientRect();
+    window.scrollBy({ top: rect.height * 2, behavior: 'smooth' });
+  }
 }
 
 function showError(errorMessage, bgcolor) {
@@ -48,15 +55,7 @@ function showError(errorMessage, bgcolor) {
 function createMarkup(jsonData) {
   const contentMarkup = jsonData.hits
     .map(
-      ({
-        webformatURL,
-        largeImageURL,
-        tags,
-        likes,
-        views,
-        comments,
-        downloads,
-      }) =>
+      ({ webformatURL, largeImageURL, tags, likes, views, comments, downloads }) =>
         `<li class="content-list-item">
             <div class="container-div">
                 <a href="${largeImageURL}">
@@ -81,11 +80,8 @@ function createMarkup(jsonData) {
     )
     .join('');
 
-  contentUL.innerHTML += contentMarkup;
-  const mylightbox = new SimpleLightbox('.content-list-item a', {
-    captionsData: 'alt',
-    captionDelay: 250,
-  });
+  contentUL.insertAdjacentHTML('beforeend', contentMarkup);
+  lightbox.refresh();
 }
 
 async function getData() {
@@ -96,8 +92,7 @@ async function getData() {
     totalHits = response.data.totalHits;
     if (totalHits === 0) {
       showError(message1, 'red');
-    } 
-    else {
+    } else {
       createMarkup(response.data);
 
       const currentPage = Number(searchParams.get('page'));
@@ -106,13 +101,13 @@ async function getData() {
       if (currentPage < Math.ceil(totalHits / perPage)) {
         loadMore.style.display = 'block';
       }
-      if (Math.ceil(totalHits / perPage) === 1){
-        showError(message2, "aqua");
+      if (Math.ceil(totalHits / perPage) === 1) {
+        showError(message2, 'aqua');
       }
     }
   } catch (error) {
     loader.style.display = 'none';
-    showError(error, "purple");
+    showError(error.message, 'purple');
   }
 }
 
@@ -128,15 +123,15 @@ searchForm.addEventListener('submit', event => {
   getData();
 });
 
-loadMore.addEventListener('click', async (event) => {
+loadMore.addEventListener('click', async () => {
   let currentPage = Number(searchParams.get('page'));
   let perPage = searchParams.get('per_page');
   searchParams.set('page', currentPage + 1);
 
   await getData();
   scrollPage();
-  
-  if (currentPage+1 >= Math.ceil(totalHits / perPage)) {
+
+  if (currentPage + 1 >= Math.ceil(totalHits / perPage)) {
     showError(message2, 'aqua');
     loadMore.style.display = 'none';
   }
